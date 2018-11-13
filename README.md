@@ -20,12 +20,12 @@ Example:
 Explan: 
 "dog-out" has parent nodes "bowel-problem" and "family-out", and has children node "hear-bark". And the CPT is shown as table below.
 
-||dog-out|$\neg$ dog-out|
+||dog-out|¬ dog-out|
 |:---: |:---: |:---: |
 |**bowel-problem**, **family-out**|0.99|0.01|
-|**bowel-problem**, **$\neg$ family-out**|0.97|0.03|
-|**$\neg$ bowel-problem**, **family-out**|0.9| 0.1|
-|**$\neg$ bowel-problem**, **$\neg$ family-out**|0.3|0.7|
+|**bowel-problem**, **¬ family-out**|0.97|0.03|
+|**¬ bowel-problem**, **family-out**|0.9| 0.1|
+|**¬ bowel-problem**, **¬ family-out**|0.3|0.7|
 
 ---
 ### 2. Note for Code
