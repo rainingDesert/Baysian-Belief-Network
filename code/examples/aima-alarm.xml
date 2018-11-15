@@ -106,7 +106,7 @@ Time-stamp: <Wed Mar 28 14:22:02 EDT 2012 ferguson>
 	<FOR>M</FOR>
 	<GIVEN>A</GIVEN>
 	<TABLE>
-	  <!--          M     !A -->
+	  <!--          M     !M -->
 	  <!-- A -->   0.70  0.30
 	  <!-- !A -->  0.01  0.99
 	</TABLE>

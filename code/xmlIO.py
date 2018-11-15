@@ -6,12 +6,12 @@ class LoadCPT(xs.ContentHandler):
     # initialization function
     def __init__(self):
         self.currentTag = None      # store current tage name
-        self.attrs = {}             # store attributes {attr: type, outcome}
+        self.attrs = {}             # store attributes {attr: [type, outcome]}
         self.type = None            # store type of current VARIABLE
         self.name = None            # store name of current VARIABLE or node
         self.tableName = None       # name of table
 
-        self.CPT = {}               # CPT {node: [[parents], [children], [value]]}
+        self.CPT = {}               # CPT {node: [[parents], [children], {string: value}]}
     
     # start of each element
     def startElement(self, tag, attributes):
@@ -65,7 +65,7 @@ class LoadCPT(xs.ContentHandler):
 class GetCPT:
     # initialization function
     def __init__(self, fileName):
-        self.attrs = None   # store attributes {attr: type, outcome}
+        self.attrs = None   # store attributes {attr: [type, outcome]}
         self.CPT = None     # CPT {node: [[parents], [children], [value]]}
         self.tableName = None # name of table        
         self.__getCPT(fileName)
@@ -94,13 +94,79 @@ class GetCPT:
         del parser
         gc.collect()
 
-if(__name__ == "__main__"):
-    handler = GetCPT("./examples/aima-wet-grass.xml")
+    # get ordered attributes in Bayesian Network
+    def orderAttrCPT(self):
+        # find root
+        CPTvars = [attr for attr in self.CPT if(len(self.CPT[attr][0]) == 0)]
+        Queue = [attr for attr in CPTvars]
 
-    print(handler.tableName)
-    print("---------------------------")
-    print(handler.attrs)
-    print("---------------------------")
-    print(handler.CPT)
+        # get children
+        while(len(Queue) != 0):
+            # for each attribute store their children
+            curAttr = Queue.pop()
+            childRen = self.CPT[curAttr][1]
+            Queue += childRen
+            for childAttr in childRen:
+                # add attribute to be next of current attribute
+                if(childAttr not in CPTvars):
+                    CPTvars.insert(CPTvars.index(curAttr) + 1, childAttr)
+                # check the order
+                elif(CPTvars.index(childAttr) < CPTvars.index(curAttr)):
+                    CPTvars.pop(CPTvars.index(childAttr))
+                    CPTvars.insert(CPTvars.index(curAttr) + 1, childAttr)
 
-    
+        return CPTvars
+
+    # get probability according to evidence from CPT
+    def getProbability(self, attrName, evidence):
+        # empty evidence
+        if(len(evidence) == 0):
+            print("evidence should not be empty")
+            exit(1)
+
+        # calculate the id for value
+        row = 0     # row number of CPT
+        base = 1    # base of each magnitude of row number
+        for parentId in range(len(self.CPT[attrName][0]) - 1, -1, -1):
+            row += base * evidence[self.CPT[attrName][0][parentId]]
+            base *= (len(self.attrs[self.CPT[attrName][0][parentId]]) - 1)
+
+        return self.CPT[attrName][2][row * (len(self.attrs[attrName]) - 1) + evidence[attrName]]
+
+    # get factor according to current attribute and evidence
+    def getFactor(self, attrName, evidence):
+        # get rows
+        base = 1    # base of each magnitude of row number
+        rows = []  # list of rows
+
+        # first magnitude
+        if(self.CPT[attrName][0][-1] in evidence):
+            rows.append(evidence[self.CPT[attrName][0][-1]])
+        else:
+            rows += [valueId for valueId in len(self.attrs[self.CPT[attrName][0][-1]]) - 1]
+        base = len(self.attrs[self.CPT[attrName][0][-1]]) - 1
+
+        # next several magnitude
+        for parentId in range(len(self.CPT[attrName][0]) - 2, -1, -1):
+            # in evidence
+            parent = self.CPT[attrName][0][parentId]
+            if(parent in evidence and evidence[parent] != 0):
+                rows += [row + evidence[parent] * base for row in rows]
+            
+            # all situation
+            else:
+                rows += [valueId * base + row for valueId in range(1, len(self.attrs[parent]) - 1) for row in rows]
+
+            # update base
+            base *= len(self.attrs[parent]) - 1
+
+        # get factor
+        rows.sort()
+        factors = []
+        if(attrName in evidence):
+            factors += [self.CPT[attrName][2][row * (len(self.attrs[attrName]) - 1) + evidence[attrName]] for row in rows]
+        else:
+            for row in rows:
+                factors += [self.CPT[attrName][2][row * (len(self.attrs[attrName]) - 1) + valueId] for valueId in range(len(self.attrs[attrName]) - 1)]
+
+        return factors
