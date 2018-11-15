@@ -75,7 +75,12 @@ class Execution:
     def execWeightSample(self):
         # call approximate inference: likelihood weighting
         wei = approximate.Sampling()
+
+        start = time.time()
         result = wei.callLikelihood(self.query, self.evidence, self.CPTStore, self.sampleNum)
+        end = time.time()
+
+        print("time consuming is " + str(end - start))
 
         # delete
         del wei

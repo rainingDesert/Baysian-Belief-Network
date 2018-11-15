@@ -105,8 +105,7 @@ class Sampling:
                 queryNum[sampleRes[query]] += 1
         
         return queryNum
-       
-  
+
     # likelihood weighting
     def __likelihoodWeight(self, query, evidence, CPT, sampleNum):
         
@@ -120,7 +119,6 @@ class Sampling:
             # update weight
             queryWeight[sampleRes[query]] += weight
 
-        print(queryWeight)
         return queryWeight
 
     # call from outside for rejection sampling

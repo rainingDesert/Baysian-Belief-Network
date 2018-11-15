@@ -11,7 +11,7 @@ class LoadCPT(xs.ContentHandler):
         self.name = None            # store name of current VARIABLE or node
         self.tableName = None       # name of table
 
-        self.CPT = {}               # CPT {node: [[parents], [children], {string: value}]}
+        self.CPT = {}               # CPT {node: [[parents], [children], [value]]}
     
     # start of each element
     def startElement(self, tag, attributes):
@@ -66,26 +66,53 @@ class GetCPT:
     # initialization function
     def __init__(self, fileName):
         self.attrs = None   # store attributes {attr: [type, outcome]}
-        self.CPT = None     # CPT {node: [[parents], [children], [value]]}
+        self.CPT = None     # CPT {node: [[parents], [children], [[[attr value, ...], value], ...]}  the last on of [attr value, ...] is ndoe
         self.tableName = None # name of table        
         self.__getCPT(fileName)
 
+    # update CPT
+    def __updateCPT(self):
+        for nodeAttr in self.CPT:
+            # get CPT value
+            CPTvalues = self.CPT[nodeAttr][2]
+            CPRdict = [[[], value] for value in CPTvalues]
+
+            # get values of each attribute
+            for CPRId in range(len(CPRdict)):
+                tempCPRId = CPRId
+                # get value
+                CPRdict[CPRId][0].append(tempCPRId % (len(self.attrs[nodeAttr]) - 1))
+                tempCPRId = tempCPRId // (len(self.attrs[nodeAttr]) - 1)
+
+                for parentId in range(len(self.CPT[nodeAttr][0]) - 1, -1, -1):
+                    parent = self.CPT[nodeAttr][0][parentId]
+                    CPRdict[CPRId][0].append(tempCPRId % (len(self.attrs[parent]) - 1))
+                    tempCPRId = tempCPRId // (len(self.attrs[parent]) - 1)
+                # match value and parent attribute order
+                CPRdict[CPRId][0].reverse()
+
+            # update CPT
+            self.CPT[nodeAttr][2] = CPRdict
+
     # get CPT from file
     def __getCPT(self, fileName):
-        #create XMLReader
+        # create XMLReader
         parser = xs.make_parser()
-        #turn off namespaces
+        # turn off namespaces
         parser.setFeature(xs.handler.feature_namespaces, 0)
 
-        #rewrite
+        # rewrite
         handler = LoadCPT()
         parser.setContentHandler(handler)
         
-        #get CPT
+        # get CPT
         parser.parse(fileName)
         self.attrs = copy.deepcopy(handler.attrs)
         self.CPT = copy.deepcopy(handler.CPT)
         self.tableName = copy.deepcopy(handler.tableName)
+
+        # update CPT
+        self.__updateCPT()
 
         #delete objects
         del handler.attrs
@@ -125,13 +152,15 @@ class GetCPT:
             exit(1)
 
         # calculate the id for value
-        row = 0     # row number of CPT
-        base = 1    # base of each magnitude of row number
+        idList = [evidence[attrName]]
         for parentId in range(len(self.CPT[attrName][0]) - 1, -1, -1):
-            row += base * evidence[self.CPT[attrName][0][parentId]]
-            base *= (len(self.attrs[self.CPT[attrName][0][parentId]]) - 1)
+            idList.append(evidence[self.CPT[attrName][0][parentId]])
+        idList.reverse()
 
-        return self.CPT[attrName][2][row * (len(self.attrs[attrName]) - 1) + evidence[attrName]]
+        # get value
+        for valueCell in self.CPT[attrName][2]:
+            if(valueCell[0] == idList):
+                return valueCell[1]
 
     # get factor according to current attribute and evidence
     def getFactor(self, attrName, evidence):
@@ -170,3 +199,9 @@ class GetCPT:
                 factors += [self.CPT[attrName][2][row * (len(self.attrs[attrName]) - 1) + valueId] for valueId in range(len(self.attrs[attrName]) - 1)]
 
         return factors
+
+if(__name__ == "__main__"):
+    get = GetCPT("./examples/dog-problem.xml")
+    for node in get.CPT:
+        print(node, end = ": ")
+        print(get.CPT[node])
