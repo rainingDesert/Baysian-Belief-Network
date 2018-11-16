@@ -21,7 +21,7 @@ class Execution:
         start = 0
 
         self.method = sys.argv[-1]
-        if(self.method == "enum"):
+        if(self.method == "enum" or self.method == "elim"):
             start = 1
         else:
             self.sampleNum = int(sys.argv[1])
@@ -41,7 +41,30 @@ class Execution:
     def execInfEnum(self):
         # call Enumeration
         enum = exactInference.Enumeration()
+
+        start = time.time()
         result = enum.enumerationAsk(self.query, self.evidence, self.CPTStore)
+        end = time.time()
+
+        print("time consuming is " + str(end - start) + "second")
+
+        # delete
+        del enum
+        gc.collect()
+
+        result = [round(p, 3) for p in result]
+        return result
+
+    # execute inference (Variable Elimination)
+    def execVarElim(self):
+        # call Enumeration
+        enum = exactInference.valueElimination()
+
+        start = time.time()
+        result = enum.enumerationAsk(self.query, self.evidence, self.CPTStore)
+        end = time.time()
+
+        print("time consuming is " + str(end - start) + "second")
 
         # delete
         del enum
@@ -59,7 +82,7 @@ class Execution:
         result = rej.callRejectSample(self.query, self.evidence, self.CPTStore, self.sampleNum, 1)
         end = time.time()
 
-        print("time consuming is " + str(end - start))
+        print("time consuming is " + str(end - start) + "second")
 
         # delete
         del rej
@@ -71,7 +94,7 @@ class Execution:
         result = [round(p, 3) for p in result]
         return result
 
-    # execute: likelihood weighting 
+    # execute likelihood weighting 
     def execWeightSample(self):
         # call approximate inference: likelihood weighting
         wei = approximate.Sampling()
@@ -80,10 +103,28 @@ class Execution:
         result = wei.callLikelihood(self.query, self.evidence, self.CPTStore, self.sampleNum)
         end = time.time()
 
-        print("time consuming is " + str(end - start))
+        print("time consuming is " + str(end - start) + "second")
 
         # delete
         del wei
+        gc.collect()
+
+        result = [round(p, 3) for p in result]
+        return result
+
+    # execute gibbs sampling
+    def execGibbsSample(self):
+        # call approximate inference: gibbs sampling
+        gib = approximate.Sampling()
+
+        start = time.time()
+        result = gib.callGibbsSample(self.query, self.evidence, self.CPTStore, self.sampleNum)
+        end = time.time()
+
+        print("time consuming is " + str(end - start) + " second")
+
+        # delete
+        del gib
         gc.collect()
 
         result = [round(p, 3) for p in result]
@@ -98,6 +139,11 @@ if(__name__ == "__main__"):
         print("Exact inference with enumeraton: ")
         norm = ex.execInfEnum()
 
+    # approximate inference with 
+    elif(ex.method == "elim"):
+        print("Exact inference with Validation ELimination: ")
+        norm = ex.execVarElim()
+
     # approximate inference with rejection sampling
     elif(ex.method == "rej"):
         print("Approximate inference with rejection sampling: ")
@@ -107,6 +153,22 @@ if(__name__ == "__main__"):
     elif(ex.method == "wei"):
         print("Approximate inference with likelihood weighting: ")
         norm = ex.execWeightSample()
+
+    # approximate inference with gibbs sampling
+    elif(ex.method == "gib"):
+        print("Approximate inference with Gibbs Sampling: ")
+        norm = ex.execGibbsSample()
+
+    # error message
+    else:
+        print("unrealizable message with " + ex.method)
+        print("--------------function-----------------")
+        print("enum: enumeration")
+        print("elim: validation elimination")
+        print("rej: rejection sampling")
+        print("wei: likelihood weighting")
+        print("gib: Gibbs sampling")
+        exit(1)
 
     print("result is: ", end = " ")
     print(norm)

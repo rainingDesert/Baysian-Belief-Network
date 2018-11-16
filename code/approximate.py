@@ -4,6 +4,7 @@ import copy
 import gc
 import threading
 import math
+import exactInference
 
 # inherit threading
 class MyThread(threading.Thread):
@@ -32,6 +33,30 @@ class Sampling:
             newEvidence[var] = valueId
             probs.append(CPT.getProbability(var, newEvidence))
     
+        # do sample
+        result = random.random()
+        for valueId, prob in enumerate(probs):
+            if(prob >= result):
+                
+                # delete
+                del newEvidence
+                del probs
+                gc.collect()
+                
+                return valueId
+            result -= prob
+
+        print("Error here")
+        return -1
+
+    # random sample with Markov Blanket
+    def __marBlanSample(self, CPT, evidence, var, exInf):
+        # get probability
+        newEvidence = copy.deepcopy(evidence)
+        probs = exInf.enumerationAsk(var, newEvidence, CPT)
+    
+        # print(str(newEvidence) + " : " + str(probs))
+
         # do sample
         result = random.random()
         for valueId, prob in enumerate(probs):
@@ -121,6 +146,46 @@ class Sampling:
 
         return queryWeight
 
+    # gibbs sampling
+    def __gibbsSample(self, query, evidence, CPT, sampleNum):
+        # exact inference object
+        exInf = exactInference.Enumeration()
+        queryRes = [0 for value in range(len(CPT.attrs[query]) - 1)]
+
+        # get attributes in CPT
+        nonEviVars = [var for var in list(CPT.attrs.keys()) if(var not in evidence)]
+        varMarBlan = [CPT.getMarBlan(var) for var in nonEviVars]
+
+        for varId, var in enumerate(nonEviVars):
+            print(var, end = ": ")
+            print(varMarBlan[varId])
+
+        # initialize values for attributes
+        state = {var : random.randint(0, len(CPT.attrs[var]) - 2) for var in list(CPT.attrs.keys())}
+        for attr in evidence:
+            state[attr] = evidence[attr]
+
+        # sample
+        for i in range(sampleNum):
+            # sample each attribute
+            for varId, var in enumerate(nonEviVars):
+                # set value for Markov Blanket
+                newEvidence = {marVar : state[marVar] for marVar in varMarBlan[varId]}
+                # random sample
+                result = self.__marBlanSample(CPT, newEvidence, var, exInf)
+                # update sample result
+                state[var] = result
+                queryRes[state[query]] += 1
+
+        # delete
+        del exInf
+        del nonEviVars
+        del varMarBlan
+        del state
+        gc.collect()
+
+        return queryRes
+
     # call from outside for rejection sampling
     def callRejectSample(self, query, evidence, CPT, sampleNum, threadNum = 5):
 
@@ -166,3 +231,12 @@ class Sampling:
         queryWeight = [weight / sum(queryWeight) for weight in queryWeight]
 
         return queryWeight
+
+    # call from outsider for gibbs sampling
+    def callGibbsSample(self, query, evidence, CPT, sampleNum):
+        queryRes = self.__gibbsSample(query, evidence, CPT, sampleNum)
+
+        # normalization
+        queryRes = [res / sum(queryRes) for res in queryRes]
+
+        return queryRes

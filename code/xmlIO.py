@@ -164,41 +164,44 @@ class GetCPT:
 
     # get factor according to current attribute and evidence
     def getFactor(self, attrName, evidence):
-        # get rows
-        base = 1    # base of each magnitude of row number
-        rows = []  # list of rows
+        # get CPT
+        curCPT = copy.deepcopy(self.CPT[attrName][2])
 
-        # first magnitude
-        if(self.CPT[attrName][0][-1] in evidence):
-            rows.append(evidence[self.CPT[attrName][0][-1]])
-        else:
-            rows += [valueId for valueId in len(self.attrs[self.CPT[attrName][0][-1]]) - 1]
-        base = len(self.attrs[self.CPT[attrName][0][-1]]) - 1
+        # select rows according to evidence
+        eviParents = []
+        for parentId, parent in enumerate(self.CPT[attrName][0]):
+            # filter according evidence
+            if(parent in evidence):
+                eviParents.append(parentId)
+                curCPT = [cell for cell in curCPT if(cell[0][parentId] == evidence[parent])]
 
-        # next several magnitude
-        for parentId in range(len(self.CPT[attrName][0]) - 2, -1, -1):
-            # in evidence
-            parent = self.CPT[attrName][0][parentId]
-            if(parent in evidence and evidence[parent] != 0):
-                rows += [row + evidence[parent] * base for row in rows]
-            
-            # all situation
-            else:
-                rows += [valueId * base + row for valueId in range(1, len(self.attrs[parent]) - 1) for row in rows]
-
-            # update base
-            base *= len(self.attrs[parent]) - 1
-
-        # get factor
-        rows.sort()
-        factors = []
+        # select row for current attribute
         if(attrName in evidence):
-            factors += [self.CPT[attrName][2][row * (len(self.attrs[attrName]) - 1) + evidence[attrName]] for row in rows]
-        else:
-            for row in rows:
-                factors += [self.CPT[attrName][2][row * (len(self.attrs[attrName]) - 1) + valueId] for valueId in range(len(self.attrs[attrName]) - 1)]
+            eviParents.append(len(curCPT[0][0]) - 1)
+            curCPT = [cell for cell in curCPT if(cell[0][-1] == evidence[attrName])]
 
-        return factors
+        # update values of attributes
+        eviParents.sort(reverse = True)
+        for cellId in range(len(curCPT)):
+            for parentId in eviParents:
+                curCPT[cellId][0].pop(parentId)
+
+        return curCPT
+
+    # get Markov Blanket
+    def getMarBlan(self, attrName):
+        # get parents
+        marBlan = [parent for parent in self.CPT[attrName][0]]
+
+        # get children
+        children = [child for child in self.CPT[attrName][1]]
+        marBlan += children
+
+        # get children's parents
+        marBlan += [childParent for child in children for childParent in self.CPT[child][0] if(childParent != attrName)]
+        marBlan = list(set(marBlan))
+
+        return marBlan
 
 if(__name__ == "__main__"):
     get = GetCPT("./examples/dog-problem.xml")

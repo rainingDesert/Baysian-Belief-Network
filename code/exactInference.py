@@ -66,12 +66,13 @@ class valueElimination:
 
     # order attributes according to size of next factor
     def __orderVars(self, attrs, evidence, factorNames, CPT):
-        attrList = [[attrFactor for attrFactor in copy.deepcopy(factorNames) if attrFactor not in evidence] for attr in attrs]
+        attrList = [attrFactor for attrFactor in copy.deepcopy(factorNames) if attrFactor not in evidence]
+        attrList = [attrList for attr in attrs]
 
         # attributes in currrent factors
         for attrId, attr in enumerate(attrs):
             if(attr in attrList[attrId]):
-                attrList.pop(attrList.idnex(attr))
+                attrList[attrId].pop(attrList[attrId].index(attr))
 
         # attributes not calculated yet
         for attrId, attr in enumerate(attrs):
@@ -91,10 +92,6 @@ class valueElimination:
                 if(candidate not in attrs):
                     continue
                 
-                #child connects only current attribute
-                if(len(CPT.CPT[candidate][0]) == 1):
-                    continue
-
                 # parents of children
                 check = True
                 for parCan in CPT.CPT[candidate][0]:
@@ -102,14 +99,13 @@ class valueElimination:
                         check = False
                         break
                 if(check):
-                    attrList[attrId] += [node for node in CPT.CPT[candidate][0] if node not in evidence and node != attr]
+                    attrList[attrId] += [node for node in CPT.CPT[candidate][0] if(node not in evidence and node != attr)]
         
         # get dimension
         attrDim = [len(set(attrSet)) for attrSet in attrList]
         
         # select the one with least dimension
         return attrs[attrDim.index(min(attrDim))]
-
 
     # build new factors
     def __newFactors(self, curAttr, attrs, evidence, CPT, pastFactorNames, pastFactors):
@@ -132,10 +128,6 @@ class valueElimination:
             # child has been selected
             if(candidate not in attrs):
                 continue
-            
-            # child connect only current attribute
-            if(len(CPT.CPT[candidate][0]) == 1):
-                continue
 
             # parent of child
             check = True
@@ -144,52 +136,34 @@ class valueElimination:
                     check = False
                     break
             if(check):
-                newFactorNames.append([parCan for parCan in CPT.CPT[candidate][0] if parCan not in evidence] + [candidate])
+                newFactorNames.append([parCan for parCan in CPT.CPT[candidate][0] + [candidate] if(parCan not in evidence)])
                 newFactors.append(CPT.getFactor(candidate, evidence))
         
         # mutiple
-        newFactorNames.append(pastFactorNames)
-        newFactors.append(pastFactors)
-        
-        factorNames = [newFactorNames[0]]
-        factors = [newFactors[0]]
-        for newNameList in newFactorNames[1:]:
+        if(len(pastFactorNames) != 0):
+            newFactorNames.append(pastFactorNames)
+            newFactors.append(pastFactors)
+
+        factorNames = copy.deepcopy(newFactorNames[0])
+        factors = copy.deepcopy(newFactors[0])
+        for newNameList, newFactorList in zip(newFactorNames[1:], newFactors[1:]):
             # merge name
             tempFactorNames = factorNames + [name for name in newNameList if name not in factorNames]
 
             # get factors
             tempFactors = []
-            for factorId in range(sum([len(CPT.attr[name]) - 1 for name in tempFactorNames])):
-
-                # calculate result
-                rows = [0, 0]
-                tempFactorId = factorId
-                for nameId in range(len(tempFactorNames) - 1, -1, -1):
-                    tempFactorName = tempFactorNames[nameId]
-                    value = tempFactorId % (len(CPT.attr[tempFactorName]) - 1)
-                    tempFactorId = tempFactorId // (len(CPT.attr[tempFactorName]) - 1)
-                    if(value != 0):
-
-                        # update row of the first factor
-                        if(tempFactorName in factorNames):
-                            baseList = [len(CPT.attr[factorNames[bit]]) - 1 for bit in range(len(factorNames) - 1, factorNames.index(tempFactorName), -1)]
-                            if(len(baseList) == 0):
-                                base = 1
-                            else:
-                                base = sum(baseList)
-                            rows[0] += value * base
-
-                        # update row of the second factor
-                        if(tempFactorName in newNameList):
-                            baseList = [len(CPT.attr[newNameList[bit]]) - 1 for bit in range(len(newNameList) - 1, newNameList.index(tempFactorName), -1)]
-                            if(len(baseList) == 0):
-                                base = 1
-                            else:
-                                base = sum(baseList)
-                            rows[1] += value * base
-
-                # update factor
-                tempFactors.append(factorNames[rows[0]] * newNameList[rows[1]])
+            commentNames = [[nameId, newNameList.index(name)] for nameId, name in enumerate(factorNames) if name in newNameList]
+            for factor in factors:
+                for newFactor in newFactorList:
+                    check = True
+                    for names in commentNames:
+                        if(factor[0][names[0]] != newFactor[0][names[1]]):
+                            check = False
+                            break
+                    if(check):
+                        tempFactorAttrs = copy.deepcopy(factor[0])
+                        tempFactorAttrs += [attrVal for attrValId, attrVal in enumerate(newFactor[0]) if(newNameList[attrValId] not in factorNames)]
+                        tempFactors.append([tempFactorAttrs, factor[1] * newFactor[1]])
 
             # new factor
             factorNames = tempFactorNames
@@ -198,14 +172,43 @@ class valueElimination:
         return factorNames, factors
 
     # sum up factors
-    def __sumFactors(self, attr, factors, factorNames):
-        return None
+    def __sumFactors(self, attr, factors, factorNames, CPT):
+        attrId = factorNames.index(attr)
+        tempFactors = copy.deepcopy(factors)
+
+        # get rows and sum
+        # calculate merge distance
+        disId = 1
+        for nameId in range(len(factorNames) - 1, attrId, -1):
+            disId *= len(CPT.attrs[factorNames[nameId]]) - 1
+        
+        # merge factor
+        newFactorNames = copy.deepcopy(factorNames)
+        newFactorNames.pop(attrId)
+
+        newFactors = []
+        attrValueNum = len(CPT.attrs[attr]) - 1
+
+        # bits up to current ID
+        upNum = 1
+        for nameId in range(attrId):
+            upNum *= len(CPT.attrs[factorNames[nameId]]) - 1
+        for upId in range(upNum):
+            for downId in range(disId):
+                newFactor = [[], 0]
+
+                newFactor[1] = sum([tempFactors[upId * disId * attrValueNum + num * disId + downId][1] for num in range(attrValueNum)])
+                newFactor[0] = copy.deepcopy(tempFactors[upId * disId * attrValueNum + downId][0])
+                newFactor[0].pop(attrId)
+                newFactors.append(newFactor)
+        
+        return newFactorNames, newFactors
 
     # do elimination
     # query: string (attribute name)
     # evidence: dict ({attribute name: valueId})
     def enumerationAsk(self, query, evidence, CPT):
-        factors = []       # store factor: []
+        factors = []       # store factor: [[[attribute value, ...], value], ...]
         factorNames = []    # variable included in the factor
         attrs = list(CPT.attrs.keys())    #attributes: [attr, ...]
         newEvidence = copy.deepcopy(evidence)   #evidence
@@ -219,13 +222,14 @@ class valueElimination:
 
             # update factors (sum)
             if(curAttr not in evidence and curAttr != query):
-                self.__sumFactors(curAttr, factors, factorNames)
+                factorNames, factors = self.__sumFactors(curAttr, factors, factorNames, CPT)
 
             # drop current attribute
             attrs.pop(attrs.index(curAttr))
         
         # normalize final factors
-        result = [p / sum(factors[0]) for p in factors[0]]
+        result = [factor[1] for factor in factors]
+        result = [p / sum(result) for p in result]
 
         # delete
         del newEvidence
