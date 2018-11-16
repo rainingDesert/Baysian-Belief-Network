@@ -65,14 +65,8 @@ class valueElimination:
         pass
 
     # order attributes according to size of next factor
-    def __orderVars(self, attrs, evidence, factorNames, CPT):
-        attrList = [attrFactor for attrFactor in copy.deepcopy(factorNames) if attrFactor not in evidence]
-        attrList = [attrList for attr in attrs]
-
-        # attributes in currrent factors
-        for attrId, attr in enumerate(attrs):
-            if(attr in attrList[attrId]):
-                attrList[attrId].pop(attrList[attrId].index(attr))
+    def __orderVars(self, attrs, evidence, CPT):
+        attrList = [[] for attr in attrs]
 
         # attributes not calculated yet
         for attrId, attr in enumerate(attrs):
@@ -105,7 +99,7 @@ class valueElimination:
         attrDim = [len(set(attrSet)) for attrSet in attrList]
         
         # select the one with least dimension
-        return attrs[attrDim.index(min(attrDim))]
+        return sorted(attrs, key = lambda k : attrDim[attrs.index(k)] )
 
     # build new factors
     def __newFactors(self, curAttr, attrs, evidence, CPT, pastFactorNames, pastFactors):
@@ -210,12 +204,12 @@ class valueElimination:
     def enumerationAsk(self, query, evidence, CPT):
         factors = []       # store factor: [[[attribute value, ...], value], ...]
         factorNames = []    # variable included in the factor
-        attrs = list(CPT.attrs.keys())    #attributes: [attr, ...]
         newEvidence = copy.deepcopy(evidence)   #evidence
-        
+        attrs = self.__orderVars(list(CPT.attrs.keys()), newEvidence, CPT) #attributes: [attr, ...]
+
         while(len(attrs) != 0):
             # select an attribute to be eliminated
-            curAttr = self.__orderVars(attrs, newEvidence, factorNames, CPT)
+            curAttr = attrs[0]
 
             # update factors (mutiple)
             factorNames, factors = self.__newFactors(curAttr, attrs, newEvidence, CPT, factorNames, factors)
@@ -225,7 +219,7 @@ class valueElimination:
                 factorNames, factors = self.__sumFactors(curAttr, factors, factorNames, CPT)
 
             # drop current attribute
-            attrs.pop(attrs.index(curAttr))
+            attrs.pop(0)
         
         # normalize final factors
         result = [factor[1] for factor in factors]
