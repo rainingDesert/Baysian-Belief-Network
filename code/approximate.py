@@ -54,8 +54,6 @@ class Sampling:
         # get probability
         newEvidence = copy.deepcopy(evidence)
         probs = exInf.enumerationAsk(var, newEvidence, CPT)
-    
-        # print(str(newEvidence) + " : " + str(probs))
 
         # do sample
         result = random.random()
@@ -155,10 +153,6 @@ class Sampling:
         # get attributes in CPT
         nonEviVars = [var for var in list(CPT.attrs.keys()) if(var not in evidence)]
         varMarBlan = [CPT.getMarBlan(var) for var in nonEviVars]
-
-        for varId, var in enumerate(nonEviVars):
-            print(var, end = ": ")
-            print(varMarBlan[varId])
 
         # initialize values for attributes
         state = {var : random.randint(0, len(CPT.attrs[var]) - 2) for var in list(CPT.attrs.keys())}

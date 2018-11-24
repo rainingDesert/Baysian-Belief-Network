@@ -62,7 +62,7 @@ class Enumeration:
 class valueElimination:
     # init function
     def __init__(self):
-        pass
+        self.count = 0
 
     # order attributes according to size of next factor
     def __orderVars(self, attrs, evidence, CPT):

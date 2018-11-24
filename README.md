@@ -1,47 +1,64 @@
-## Readme File
+# Readme File
 
 ---
-### 1. Structure
-#### 1.1 Attribute
-{attr: type, outcome\}
+## 1. Files
+### 1.1. Picture
+Pictures for report or experiment results.
 
-Example: 
-{'light-on': ['nature', 'true', 'false'], 'bowel-problem': ['nature', 'true', 'false']}
+### 1.2. Code
+1. Python file are included in "code" file.
+2. "examples" file includes problems to be solved, which are represented as "xml" files.
 
-Explain: 
-"light-on" and "bowel-problem" are attributes, both of type "nature" (I don't know what it is but just written in XML file), and outcome of them are both boolean value (attribute value).
+---
+## 2. How to Run
+### 2.1. Steps
+Step1: under directory of code.
+Step2: implement python file with instructions.
 
-#### 1.2 CPT
-{node: [[parents], [children], [value]]}
+### 2.2. Instructions
+#### 2.2.1. Choice for \<algorithm name>
+1. **enum**: *enumeration* algorithm
+2. **elim**: *variable elimination* algorithm
+3. **rej**: *rejection sampling*
+4. **wei**: *likelihood weighting*
+5. **gib**: *Gibbs sampling*
+
+#### 2.2.2. Run alarm problem, wet grass problem or dog problem with exact inference algorithms.
+```
+$ python3 Exec.py <file> <query> <variable> <value>(...) <algorithm name>
+```
 
 Example:
-{'dog-out': [['bowel-problem', 'family-out'], ['hear-bark'], [0.99, 0.01, 0.97, 0.03, 0.9, 0.1, 0.3, 0.7]]}
+```
+$ python3 Exec.py ./examples/aima-alarm.xml B J true M true enum
+```
 
-Explan: 
-"dog-out" has parent nodes "bowel-problem" and "family-out", and has children node "hear-bark". And the CPT is shown as table below.
+#### 2.2.3. Run alarm problem, wet grass problem or dog problem with approximate inference algorithms.
+```
+$ python3 Exec.py <sampling time> <file> <query> <variable> <value>(...) <algorithm name>
+```
 
-||dog-out|¬ dog-out|
-|:---: |:---: |:---: |
-|**bowel-problem**, **family-out**|0.99|0.01|
-|**bowel-problem**, **¬ family-out**|0.97|0.03|
-|**¬ bowel-problem**, **family-out**|0.9| 0.1|
-|**¬ bowel-problem**, **¬ family-out**|0.3|0.7|
+Example:
+```
+$ python3 Exec.py 1000 ./examples/aima-alarm.xml B J true M true rej
+```
 
----
-### 2. Note for Code
-#### 2.1 xmlIO.py
-1. **class LoadCPT**: parser function rewrite, no need to worry (only when a change in style of XML file)
+#### 2.2.4. Run alterable size tree problem with exact inference algorithms.
+```
+$ python3 Exec.py test <nodeNumber> <query> <varbale> <value>(...) <algorithm name>
+```
 
-2. **class GetCPT**: call from outside to get CPT, need to provide file name. The class make use of \textit{xml.sax}.
- 
-3. Example to call in figure below:
-```python
-if(__name__ == "__main__"):
-    handler = GetCPT("./examples/aima-wet-grass.xml")
+Example:
+```
+$ python3 Exec.py test 10 1 2 true enum
+```
 
-    print(handler.tableName)
-    print("---------------------------")
-    print(handler.attrs)
-    print("---------------------------")
-    print(handler.CPT)
+#### 2.2.4. Run alterable size tree problem with approximate inference algorithms.
+```
+$ python3 Exec.py <sampling number> test <nodeNumber> <query> <varbale> <value>(...) <algorithm name>
+```
+
+Example:
+```
+$ python3 Exec.py 1000 test 10 1 2 true rej
 ```

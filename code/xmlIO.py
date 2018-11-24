@@ -1,6 +1,7 @@
 import xml.sax as xs
 import copy
 import gc
+import random
 
 class LoadCPT(xs.ContentHandler):
     # initialization function
@@ -67,14 +68,77 @@ class GetCPT:
     def __init__(self, fileName):
         self.attrs = None   # store attributes {attr: [type, outcome]}
         self.CPT = None     # CPT {node: [[parents], [children], [[[attr value, ...], value], ...]}  the last on of [attr value, ...] is ndoe
-        self.tableName = None # name of table        
-        self.__getCPT(fileName)
+        self.tableName = None # name of table
+        self.count = 0      # count of probability used
+
+        # get fileName 
+        if(type(fileName) == int):
+            self.__createExtreCPT(fileName)
+        else:
+            self.__getCPT(fileName)
+
+    # create extreme CPT
+    def __createExtreCPT(self, number):
+        self.attrs = {str(i):["normal", "true", "false"] for i in range(number)}
+        self.attrList = [str(i) for i in list(range(number))]
+        self.CPT = {}
+        for attrId, attr in enumerate(self.attrList):
+            if(int(attr) < 2):
+                parents = copy.deepcopy(self.attrList[:attrId])
+            else:
+                parents = copy.deepcopy(self.attrList[attrId - 2:attrId])
+            children = copy.deepcopy(self.attrList[attrId + 1: attrId + 3])
+            self.CPT[attr] = [parents, children, []]
+
+            # randomly get probability
+            for value in range(2 ** (len(parents))): 
+                CPTValue = [[[], 0], [[], 0]]
+                valueTemp = value
+                tempValueList = []
+                for valueId in range(len(parents)):
+                    tempValueList.append(valueTemp % 2)
+                    valueTemp = valueTemp >> 1
+                tempValueList.reverse()
+                CPTValue[0][0] = copy.deepcopy(tempValueList)
+                CPTValue[0][0].append(0)
+                CPTValue[0][1] = round(random.random(), 3)
+                CPTValue[1][0] = copy.deepcopy(tempValueList)
+                CPTValue[1][0].append(1)
+                CPTValue[1][1] = round(1 - CPTValue[0][1], 3)
+                self.CPT[attr][2].append(CPTValue[0])
+                self.CPT[attr][2].append(CPTValue[1])
 
     # update CPT
     def __updateCPT(self):
         for nodeAttr in self.CPT:
             # get CPT value
             CPTvalues = self.CPT[nodeAttr][2]
+            CPRdict = [[[], value] for value in CPTvalues]
+
+            # get values of each attribute
+            for CPRId in range(len(CPRdict)):
+                tempCPRId = CPRId
+                # get value
+                CPRdict[CPRId][0].append(tempCPRId % (len(self.attrs[nodeAttr]) - 1))
+                tempCPRId = tempCPRId // (len(self.attrs[nodeAttr]) - 1)
+
+                for parentId in range(len(self.CPT[nodeAttr][0]) - 1, -1, -1):
+                    parent = self.CPT[nodeAttr][0][parentId]
+                    CPRdict[CPRId][0].append(tempCPRId % (len(self.attrs[parent]) - 1))
+                    tempCPRId = tempCPRId // (len(self.attrs[parent]) - 1)
+                # match value and parent attribute order
+                CPRdict[CPRId][0].reverse()
+
+            # update CPT
+            self.CPT[nodeAttr][2] = CPRdict
+
+    # update CPT
+    def __updateCPT2(self):
+        for nodeAttr in self.CPT:
+            # get CPT value
+            CPTvalues = self.CPT[nodeAttr][2]
+
+            # build matrix and save value
             CPRdict = [[[], value] for value in CPTvalues]
 
             # get values of each attribute
@@ -146,6 +210,7 @@ class GetCPT:
 
     # get probability according to evidence from CPT
     def getProbability(self, attrName, evidence):
+        self.count += 1
         # empty evidence
         if(len(evidence) == 0):
             print("evidence should not be empty")
@@ -165,27 +230,33 @@ class GetCPT:
     # get factor according to current attribute and evidence
     def getFactor(self, attrName, evidence):
         # get CPT
-        curCPT = copy.deepcopy(self.CPT[attrName][2])
+        curCPT = []
 
-        # select rows according to evidence
-        eviParents = []
+        # get parent name id
+        eviParents = {}
         for parentId, parent in enumerate(self.CPT[attrName][0]):
             # filter according evidence
             if(parent in evidence):
-                eviParents.append(parentId)
-                curCPT = [cell for cell in curCPT if(cell[0][parentId] == evidence[parent])]
+                eviParents[parentId] = parent
 
-        # select row for current attribute
+        # get current name id
         if(attrName in evidence):
-            eviParents.append(len(curCPT[0][0]) - 1)
-            curCPT = [cell for cell in curCPT if(cell[0][-1] == evidence[attrName])]
+            eviParents[-1] = attrName
 
-        # update values of attributes
-        eviParents.sort(reverse = True)
-        for cellId in range(len(curCPT)):
+        # get value of attributes
+        parentIds = sorted(list(eviParents.keys()), reverse = True)
+        for cell in self.CPT[attrName][2]:
+            check = True
             for parentId in eviParents:
-                curCPT[cellId][0].pop(parentId)
+                if(cell[0][parentId] != evidence[eviParents[parentId]]):
+                    check = False
+                    break
+            if(check):
+                curCPT.append(copy.deepcopy(cell))
+                for parentId in parentIds:
+                    curCPT[-1][0].pop(parentId)
 
+        self.count += len(curCPT)
         return curCPT
 
     # get Markov Blanket
@@ -202,9 +273,4 @@ class GetCPT:
         marBlan = list(set(marBlan))
 
         return marBlan
-
-if(__name__ == "__main__"):
-    get = GetCPT("./examples/dog-problem.xml")
-    for node in get.CPT:
-        print(node, end = ": ")
-        print(get.CPT[node])
+        

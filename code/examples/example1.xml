@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!--
+File: aima-alarm.xml
+Creator: George Ferguson
+Created: Tue Mar 27 19:24:30 2012
+Time-stamp: <Wed Mar 28 14:22:02 EDT 2012 ferguson>
+
+    AIMA burglar alarm example (Figure 14.2)
+
+    P(B|j,m) = \alpha <0.00059224, 0.0014919> = <0.284, 0.716>
+-->
+
+<!-- DTD for the XMLBIF 0.3 format -->
+<!DOCTYPE BIF [
+	<!ELEMENT BIF ( NETWORK )*>
+	      <!ATTLIST BIF VERSION CDATA #REQUIRED>
+	<!ELEMENT NETWORK ( NAME, ( PROPERTY | VARIABLE | DEFINITION )* )>
+	<!ELEMENT NAME (#PCDATA)>
+	<!ELEMENT VARIABLE ( NAME, ( OUTCOME |  PROPERTY )* ) >
+	      <!ATTLIST VARIABLE TYPE (nature|decision|utility) "nature">
+	<!ELEMENT OUTCOME (#PCDATA)>
+	<!ELEMENT DEFINITION ( FOR | GIVEN | TABLE | PROPERTY )* >
+	<!ELEMENT FOR (#PCDATA)>
+	<!ELEMENT GIVEN (#PCDATA)>
+	<!ELEMENT TABLE (#PCDATA)>
+	<!ELEMENT PROPERTY (#PCDATA)>
+]>
+
+<BIF VERSION="0.3">
+<NETWORK>
+<NAME>AIMA-Burglar-Alarm</NAME>
+
+<!-- Variables -->
+
+<VARIABLE TYPE="nature">
+	<NAME>A</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>B</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>C</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>D</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>E</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>F</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>G</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>H</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+</VARIABLE>
+
+<!-- Probability distributions -->
+
+<!-- P(A) -->
+<DEFINITION>
+	<FOR>A</FOR>
+	<TABLE>0.33 0.67</TABLE>
+</DEFINITION>
+
+<!-- P(B) -->
+<DEFINITION>
+	<FOR>B</FOR>
+	<TABLE>0.58 0.42</TABLE>
+</DEFINITION>
+
+<!-- P(C|A,B) -->
+<DEFINITION>
+	<FOR>C</FOR>
+    <GIVEN>A</GIVEN>
+    <GIVEN>B</GIVEN>
+	<TABLE>0.99 0.01 0.1 0.9 0.87 0.13 0.8 0.2</TABLE>
+</DEFINITION>
+
+<!-- P(D|B) -->
+<DEFINITION>
+	<FOR>D</FOR>
+    <GIVEN>B</GIVEN>
+	<TABLE>0.486 0.514 0.23 0.77</TABLE>
+</DEFINITION>
+
+<!-- P(E|C, D) -->
+<DEFINITION>
+	<FOR>E</FOR>
+    <GIVEN>C</GIVEN>
+    <GIVEN>D</GIVEN>
+	<TABLE>0.588 0.412 0.636 0.364 0.13 0.87 0.24 0.76</TABLE>
+</DEFINITION>
+
+<!-- P(F) -->
+<DEFINITION>
+	<FOR>F</FOR>
+	<TABLE>0.35 0.65</TABLE>
+</DEFINITION>
+
+<!-- P(G|D, E, F) -->
+<DEFINITION>
+	<FOR>G</FOR>
+    <GIVEN>D</GIVEN>
+    <GIVEN>E</GIVEN>
+    <GIVEN>F</GIVEN>
+	<TABLE>0.736 0.264 0.79 0.21 0.25 0.75 0.75 0.25 0.06 0.94 0.43 0.57 0.93 0.07 0.57 0.43</TABLE>
+</DEFINITION>
+
+<!-- P(H|G) -->
+<DEFINITION>
+	<FOR>H</FOR>
+    <GIVEN>G</GIVEN>
+	<TABLE>0.21 0.79 0.32 0.68</TABLE>
+</DEFINITION>
+
+</NETWORK>
+</BIF>

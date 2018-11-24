@@ -20,16 +20,22 @@ class Execution:
         # start number of file
         start = 0
 
+        # check method
         self.method = sys.argv[-1]
         if(self.method == "enum" or self.method == "elim"):
             start = 1
         else:
             self.sampleNum = int(sys.argv[1])
             start = 2
+
+        # check file name
         fileName = sys.argv[start]
+        if(fileName == "test"):
+            start += 1
+            fileName = int(sys.argv[start])
+        
         self.query = sys.argv[start + 1]
         self.evidence = {sys.argv[argvId]:sys.argv[argvId + 1].lower() for argvId in range(start + 2, len(sys.argv) - 1, 2)}
-        
 
         # load CPT
         self.CPTStore = xmlIO.GetCPT(fileName)
@@ -46,7 +52,9 @@ class Execution:
         result = enum.enumerationAsk(self.query, self.evidence, self.CPTStore)
         end = time.time()
 
-        print("time consuming is " + str(end - start) + "second")
+        print("time consuming is " + str(end - start) + " second")
+
+        print("probability used count is : " + str(self.CPTStore.count))
 
         # delete
         del enum
@@ -64,7 +72,9 @@ class Execution:
         result = enum.enumerationAsk(self.query, self.evidence, self.CPTStore)
         end = time.time()
 
-        print("time consuming is " + str(end - start) + "second")
+        print("time consuming is " + str(end - start) + " second")
+
+        print("probability used count is : " + str(self.CPTStore.count))
 
         # delete
         del enum
@@ -82,7 +92,7 @@ class Execution:
         result = rej.callRejectSample(self.query, self.evidence, self.CPTStore, self.sampleNum, 1)
         end = time.time()
 
-        print("time consuming is " + str(end - start) + "second")
+        print("time consuming is " + str(end - start) + " second")
 
         # delete
         del rej
@@ -103,7 +113,7 @@ class Execution:
         result = wei.callLikelihood(self.query, self.evidence, self.CPTStore, self.sampleNum)
         end = time.time()
 
-        print("time consuming is " + str(end - start) + "second")
+        print("time consuming is " + str(end - start) + " second")
 
         # delete
         del wei
@@ -130,7 +140,8 @@ class Execution:
         result = [round(p, 3) for p in result]
         return result
 
-if(__name__ == "__main__"):
+# normal execution
+def norExec():
     ex = Execution()
     norm = None
 
@@ -173,3 +184,5 @@ if(__name__ == "__main__"):
     print("result is: ", end = " ")
     print(norm)
 
+if(__name__ == "__main__"):
+    norExec()
